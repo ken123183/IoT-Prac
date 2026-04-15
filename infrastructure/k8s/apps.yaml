@@ -1,0 +1,143 @@
+# --- Core Service ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: battery-core
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: core-service
+  template:
+    metadata:
+      labels:
+        app: core-service
+    spec:
+      initContainers:
+      - name: wait-for-services
+        image: alpine
+        command: ["/bin/sh", "-c"]
+        args:
+        - >
+          until nc -zv battery-postgres 5432 && nc -zv battery-rabbitmq 5672 && nc -zv battery-redis 6379; do
+            echo "Waiting for all dependencies (Postgres, RMQ, Redis)...";
+            sleep 2;
+          done;
+      containers:
+      - name: core-service
+        image: battery-core:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_DATASOURCE_HOST
+          value: "battery-postgres"
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: "battery_pass"
+        - name: SPRING_DATA_REDIS_HOST
+          value: "battery-redis"
+        - name: SPRING_REDIS_HOST
+          value: "battery-redis"
+        - name: SPRING_RABBITMQ_HOST
+          value: "battery-rabbitmq"
+        resources:
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: battery-core
+spec:
+  type: LoadBalancer
+  selector:
+    app: core-service
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+# --- IoT Gateway ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: battery-gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      initContainers:
+      - name: wait-for-services
+        image: alpine
+        command: ["/bin/sh", "-c"]
+        args:
+        - >
+          until nc -zv battery-rabbitmq 5672 && nc -zv battery-redis 6379; do
+            echo "Waiting for Infrastructure (RMQ, Redis)...";
+            sleep 2;
+          done;
+      containers:
+      - name: gateway
+        image: battery-gateway:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3001
+        env:
+        - name: REDIS_URL
+          value: "redis://battery-redis:6379"
+        - name: AMQP_URL
+          value: "amqp://battery_rmq:battery_pass@battery-rabbitmq:5672"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: battery-gateway
+spec:
+  type: LoadBalancer
+  selector:
+    app: gateway
+  ports:
+  - port: 3001
+---
+# --- Frontend Admin ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: battery-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: battery-frontend:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: battery-frontend
+spec:
+  type: LoadBalancer
+  selector:
+    app: frontend
+  ports:
+  - port: 80
+    targetPort: 80

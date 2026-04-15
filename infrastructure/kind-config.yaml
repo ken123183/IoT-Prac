@@ -1,0 +1,7 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane # 控制中心
+- role: worker        # 虛擬伺服器 1
+- role: worker        # 虛擬伺服器 2
+- role: worker        # 虛擬伺服器 3

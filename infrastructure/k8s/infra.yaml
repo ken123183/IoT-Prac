@@ -1,0 +1,108 @@
+# --- Redis Service ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: battery-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:alpine
+        ports:
+        - containerPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: battery-redis
+spec:
+  selector:
+    app: redis
+  ports:
+  - port: 6379
+---
+# --- Postgres Service ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: battery-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        env:
+        - name: POSTGRES_USER
+          value: "battery_user"
+        - name: POSTGRES_PASSWORD
+          value: "battery_pass"
+        - name: POSTGRES_DB
+          value: "battery_db"
+        ports:
+        - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: battery-postgres
+spec:
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+---
+# --- RabbitMQ Service ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: battery-rabbitmq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+      - name: rabbitmq
+        image: rabbitmq:3-management-alpine
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          value: "battery_rmq"
+        - name: RABBITMQ_DEFAULT_PASS
+          value: "battery_pass"
+        ports:
+        - containerPort: 5672
+        - containerPort: 15672 # 管理介面
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: battery-rabbitmq
+spec:
+  selector:
+    app: rabbitmq
+  ports:
+  - name: amqp
+    port: 5672
+  - name: management
+    port: 15672

@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k6-test-script
+data:
+  city-ops.js: |
+    import http from 'k6/http';
+    import { sleep, check } from 'k6';
+
+    export const options = {
+        vus: 20,
+        duration: '24h', // 設定為持續運行
+    };
+
+    const GATEWAY_URL = __ENV.GATEWAY_URL || 'http://battery-gateway:3001/api/batteries';
+    const RENT_URL = __ENV.RENT_URL || 'http://battery-core:8080/api/rental/rent';
+    const RETURN_URL_BASE = __ENV.RETURN_URL || 'http://battery-core:8080/api/rental/return';
+
+    export default function () {
+        const res = http.get(GATEWAY_URL);
+        if (!check(res, { 'get batteries success': (r) => r.status === 200 })) {
+            sleep(1);
+            return;
+        }
+
+        const batteries = JSON.parse(res.body);
+        const availableBatteries = batteries.filter(b => b.status === 'AVAILABLE' && b.capacity > 15);
+
+        if (availableBatteries.length === 0) {
+            sleep(2);
+            return;
+        }
+
+        const randomBattery = availableBatteries[Math.floor(Math.random() * availableBatteries.length)];
+        const batteryId = randomBattery.id;
+
+        const rentPayload = JSON.stringify({
+            batteryId: batteryId,
+            userId: `K6_USER_${__VU}`
+        });
+
+        const rentParams = { headers: { 'Content-Type': 'application/json' } };
+        const rentRes = http.post(RENT_URL, rentPayload, rentParams);
+
+        const rentSuccess = check(rentRes, { 'rent success': (r) => r.status === 200 });
+        
+        if (rentSuccess) {
+            const usageTime = Math.floor(Math.random() * 15) + 5;
+            sleep(usageTime);
+
+            const returnRes = http.post(`${RETURN_URL_BASE}/${batteryId}`);
+            check(returnRes, { 'return success': (r) => r.status === 200 });
+        }
+
+        sleep(1);
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: battery-load-generator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: load-generator
+  template:
+    metadata:
+      labels:
+        app: load-generator
+    spec:
+      containers:
+      - name: k6
+        image: grafana/k6:latest
+        command: ["k6", "run", "/scripts/city-ops.js"]
+        env:
+        - name: GATEWAY_URL
+          value: "http://battery-gateway:3001/api/batteries"
+        - name: RENT_URL
+          value: "http://battery-core:8080/api/rental/rent"
+        - name: RETURN_URL
+          value: "http://battery-core:8080/api/rental/return"
+        volumeMounts:
+        - name: script-volume
+          mountPath: /scripts
+      volumes:
+      - name: script-volume
+        configMap:
+          name: k6-test-script

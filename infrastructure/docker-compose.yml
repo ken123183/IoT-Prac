@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: battery_postgres
+    environment:
+      POSTGRES_USER: battery_user
+      POSTGRES_PASSWORD: battery_password
+      POSTGRES_DB: battery_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: battery_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: battery_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: battery_rmq
+      RABBITMQ_DEFAULT_PASS: battery_pass
+    ports:
+      - "5672:5672"   # AMQP 連線埠
+      - "15672:15672" # Management UI 後台介面
+    volumes:
+      - rmqdata:/var/lib/rabbitmq
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  rmqdata:

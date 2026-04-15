@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: battery-simulator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: simulator
+  template:
+    metadata:
+      labels:
+        app: simulator
+    spec:
+      initContainers:
+      - name: wait-for-gateway
+        image: alpine
+        command: ["/bin/sh", "-c"]
+        args:
+        - >
+          until nc -zv battery-gateway 3001; do
+            echo "Waiting for Battery Gateway...";
+            sleep 2;
+          done;
+      containers:
+      - name: simulator
+        image: battery-gateway:latest
+        command: ["npm", "run", "simulator:prod"]
+        imagePullPolicy: Never
+        env:
+        - name: GATEWAY_URL
+          value: "http://battery-gateway:3001"
