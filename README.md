@@ -9,6 +9,22 @@
 
 ---
 
+## 📈 系統性能與穩定性證明 (Stability Verification)
+
+本系統已通過 **1,000 台電池 / 每秒 1 次遙測** 的高負載壓力測試。在該壓力下，系統展現了卓越的通訊穩定性與數據完整性。
+
+### 1. RabbitMQ 數據吞吐性能
+在網關資源優化後，數據管道可維持在 **~250 msg/s** 的穩定吞吐（單個節點處理率），且保持 **零積壓 (Zero Backlog)**。
+
+![RabbitMQ 穩定運行圖](./pic/rabbitmq_status.png)
+
+### 2. 戰情室實時監控 (1,000 Assets Ready)
+系統成功同步 1,000 顆電池的即時狀態，並保持前端地圖與後端資料庫的強一致性。
+
+![Dashboard 監控圖](./pic/dashboard_status.png)
+
+---
+
 ## 🏗️ 應用背景與核心價值
 
 在現代共享能源基礎設施中，如何同時處理「海量物理設備狀態」與「關鍵資產交易」是架構設計的終極挑戰。本專案透過 **「冷熱數據流分離」** 設計，實現了高效且穩定的數位孿生模型：
@@ -61,11 +77,27 @@
 ```
 
 ### 3. 開啟存取與監控
-部署完成後，請執行以下 Port-forward 指令來存取服務：
-*   **前端介面**: `http://localhost` (Port 80)
-*   **核心 API**: `http://localhost:8080`
+部署完成後，請分別開啟新的終端機執行以下指令：
+
+```powershell
+# 前端介面 (戰情室地圖)
+kubectl port-forward service/battery-frontend 80:80
+
+# 核心服務 API (Swagger UI)
+kubectl port-forward service/battery-core 8080:8080
+
+# IoT 網關 (Socket.io 控制台)
+kubectl port-forward service/battery-gateway 3001:3001
+
+# RabbitMQ 管理後台 (帳密: battery_rmq / battery_pass)
+kubectl port-forward service/battery-rabbitmq 15672:15672
+```
+
+存取地址：
+*   **前端介面**: `http://localhost`
+*   **核心 API**: `http://localhost:8080/swagger-ui.html`
 *   **網關介面**: `http://localhost:3001`
-*   **RabbitMQ 管理**: `http://localhost:15672` (帳密: battery_rmq / battery_pass)
+*   **RabbitMQ 管理**: `http://localhost:15672`
 
 ---
 
