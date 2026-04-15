@@ -23,24 +23,18 @@ public class TelemetryConsumer {
      * 監聽電池遙測數據並寫回資料庫
      */
     @RabbitListener(queues = RabbitConfig.TELEMETRY_QUEUE)
-    public void receiveTelemetry(String message) {
+    public void receiveTelemetry(Map<String, Object> data) {
         try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> data = objectMapper.readValue(message, Map.class);
-            
-            // 修正：相容新舊欄位名稱 (id 或 batteryId)
+            // 修正：因為使用了 Jackson2JsonMessageConverter，直接處理 Map 即可
             String batteryId = (String) data.get("id");
-            if (batteryId == null) {
-                batteryId = (String) data.get("batteryId");
-            }
-            
             Number capacity = (Number) data.get("capacity");
             
-            // 這裡我們只更新 Capacity，其他的資訊（如 Status）由業務邏輯控制
-            batteryRepository.findById(batteryId).ifPresent(battery -> {
-                battery.setCapacity(capacity.doubleValue());
-                batteryRepository.save(battery);
-            });
+            if (batteryId != null && capacity != null) {
+                batteryRepository.findById(batteryId).ifPresent(battery -> {
+                    battery.setCapacity(capacity.doubleValue());
+                    batteryRepository.save(battery);
+                });
+            }
             
         } catch (Exception e) {
             // 在實際生產環境中，這裡應該有更好的錯誤紀錄邏輯

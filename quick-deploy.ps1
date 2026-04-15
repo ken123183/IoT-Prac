@@ -25,9 +25,17 @@ kubectl apply -f infrastructure/k8s/apps.yaml
 kubectl apply -f infrastructure/k8s/simulator.yaml
 kubectl apply -f infrastructure/k8s/k6-load.yaml
 
-# 4. 等待服務就緒
-Write-Host "[+] Waiting for pods to be ready..." -ForegroundColor Yellow
-kubectl wait --for=condition=Ready pods --all -n default --timeout=300s
+# 4. 強制刷新 Pod (確保使用 Kind 加載的新鏡像)
+Write-Host "[+] Forcing rollout restart to apply new images..." -ForegroundColor Yellow
+kubectl rollout restart deployment battery-core
+kubectl rollout restart deployment battery-gateway
+kubectl rollout restart deployment battery-simulator
+
+# 5. 等待服務就緒
+Write-Host "[+] Waiting for deployments to be ready..." -ForegroundColor Yellow
+kubectl wait --for=condition=available deployment/battery-core --timeout=120s
+kubectl wait --for=condition=available deployment/battery-gateway --timeout=120s
+kubectl wait --for=condition=available deployment/battery-frontend --timeout=120s
 
 Write-Host "`n✅ Deployment Complete!" -ForegroundColor Green
 Write-Host "--------------------------------------------------"

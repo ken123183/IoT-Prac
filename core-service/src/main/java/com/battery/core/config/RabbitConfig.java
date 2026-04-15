@@ -13,4 +13,9 @@ public class RabbitConfig {
     public Queue telemetryQueue() {
         return new Queue(TELEMETRY_QUEUE, true); // 持久化隊列
     }
+
+    @Bean
+    public org.springframework.amqp.support.converter.MessageConverter jackson2JsonMessageConverter() {
+        return new org.springframework.amqp.support.converter.Jackson2JsonMessageConverter();
+    }
 }

@@ -82,7 +82,12 @@ app.get('/api/battery/:batteryId', async (req, res) => {
     if (!data || Object.keys(data).length === 0) {
       return res.status(404).json({ error: 'Battery not found' });
     }
-    res.json(data);
+    
+    // 修正：確保傳回給模擬器的數據包含正確的數字型別
+    res.json({
+      ...data,
+      capacity: data.capacity ? parseFloat(data.capacity) : 0
+    });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch battery info' });
   }
@@ -119,10 +124,10 @@ app.post('/api/telemetry', async (req, res) => {
   res.status(200).json({ success: true });
 });
 
-const PORT = 3001; // 強制對齊前端 3001
+const PORT = 3001;
 init().then(() => {
-  httpServer.listen(PORT, async () => {
-    console.log(`🚀 IoT Gateway running on http://localhost:${PORT}`);
+  httpServer.listen(PORT, '0.0.0.0', async () => {
+    console.log(`🚀 IoT Gateway running on http://0.0.0.0:${PORT}`);
   });
 }).catch(err => {
   console.error('🔥 Failed to initialize Gateway:', err);

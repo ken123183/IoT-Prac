@@ -36,17 +36,21 @@ spec:
           value: "battery_pass"
         - name: SPRING_DATA_REDIS_HOST
           value: "battery-redis"
-        - name: SPRING_REDIS_HOST
-          value: "battery-redis"
         - name: SPRING_RABBITMQ_HOST
           value: "battery-rabbitmq"
+        - name: SPRING_RABBITMQ_USERNAME
+          value: "battery_rmq"
+        - name: SPRING_RABBITMQ_PASSWORD
+          value: "battery_pass"
+        - name: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_AMQP
+          value: "DEBUG"
         resources:
           limits:
-            memory: "1Gi"
-            cpu: "1000m"
-          requests:
             memory: "512Mi"
-            cpu: "200m"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
 ---
 apiVersion: v1
 kind: Service
@@ -96,6 +100,13 @@ spec:
           value: "redis://battery-redis:6379"
         - name: AMQP_URL
           value: "amqp://battery_rmq:battery_pass@battery-rabbitmq:5672"
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
 ---
 apiVersion: v1
 kind: Service
@@ -107,6 +118,8 @@ spec:
     app: gateway
   ports:
   - port: 3001
+    targetPort: 3001
+    protocol: TCP
 ---
 # --- Frontend Admin ---
 apiVersion: apps/v1

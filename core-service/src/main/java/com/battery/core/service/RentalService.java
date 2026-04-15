@@ -89,7 +89,8 @@ public class RentalService {
         redissonClient.getMap("battery:" + batteryId, org.redisson.client.codec.StringCodec.INSTANCE).putAll(updates);
         
         // 發佈 JSON 事件 (網關訂閱此頻道 battery-events)
-        String json = String.format("{\"id\":\"%s\",\"status\":\"RENTED\",\"currentUserId\":\"%s\",\"capacity\":%f}", 
+        // 修正：使用 %.2f 精簡電量位數
+        String json = String.format("{\"id\":\"%s\",\"status\":\"RENTED\",\"currentUserId\":\"%s\",\"capacity\":%.2f}", 
                         batteryId, userId, battery.getCapacity());
         redissonClient.getTopic("battery-events", org.redisson.client.codec.StringCodec.INSTANCE).publish(json);
 
@@ -116,8 +117,9 @@ public class RentalService {
         
         redissonClient.getMap("battery:" + batteryId, org.redisson.client.codec.StringCodec.INSTANCE).putAll(updates);
         redissonClient.getMap("battery:" + batteryId, org.redisson.client.codec.StringCodec.INSTANCE).remove("currentUserId");
-
-        String json = String.format("{\"id\":\"%s\",\"status\":\"AVAILABLE\",\"currentUserId\":\"\",\"capacity\":%f}", 
+        
+        // 修正：使用 %.2f 精簡電量位數
+        String json = String.format("{\"id\":\"%s\",\"status\":\"AVAILABLE\",\"currentUserId\":\"\",\"capacity\":%.2f}", 
                         batteryId, battery.getCapacity());
         redissonClient.getTopic("battery-events", org.redisson.client.codec.StringCodec.INSTANCE).publish(json);
         
