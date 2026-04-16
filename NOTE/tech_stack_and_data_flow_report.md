@@ -33,7 +33,53 @@
 ### 2.3 高速快取與鎖定：Redis + Redisson
 *   **應用場景**：作為全域的最新狀態快照（Snapshot）、WebSocket 事件的廣播中心（Pub/Sub），以及防範並發競爭的守門員（Distributed Lock）。
 *   **選擇理由**：Redis 在記憶體內操作，讀寫速度極快。引入 Pub/Sub 可解決多個 Gateway 副本間的 Socket 狀態同步問題；Redisson 則提供了基於 Java 的完美分散式鎖封裝。
-*   **實戰調優**：在應對 K6 模擬的 Race Condition 攻擊時（20 個虛擬用戶同時搶租同一電池），我們依賴 Redisson 的 `tryLock(waitTime, leaseTime)` 機制，強制讓第二個抵達的請求排隊等待或直接返回「已被租借」，成功避免了資料庫層面的超賣災難。
+*   **實戰調優與 Race Condition 防護實例**：
+    在應對 K6 模擬的 Race Condition 攻擊時（20 個虛擬用戶同時搶租同一電池），我們必須確保「先鎖定 (Lock) -> 再開啟事務 (Transaction) -> 最後釋放鎖」。若是順序顛倒（例如直接在 `@Transactional` 方法內加鎖），Spring 的事務提交會發生在方法結束後，這時鎖已經釋放，極易引發其他執行緒趁虛而入的幻讀現象。
+    
+    以下是本專案 `RentalService.java` 中真正阻擋了超賣與資料庫寫入衝突的核心實作片段：
+
+    ```java
+    /**
+     * 租借電池 (外層：負責分散式鎖)
+     * 注意：此方法「不」標註 @Transactional，因為我們要鎖住整個事務過程
+     */
+    public String rentBattery(String batteryId, String userId) throws Exception {
+        String lockKey = "lock:battery:" + batteryId;
+        RLock lock = redissonClient.getLock(lockKey);
+
+        // 🟢 1. 嘗試獲取鎖 (等待 3 秒，持有 15 秒)
+        boolean isLocked = lock.tryLock(3, 15, TimeUnit.SECONDS);
+        if (!isLocked) {
+            throw new RuntimeException("🔒 系統繁忙：多人正在搶租此電池，請稍後再試。");
+        }
+
+        try {
+            // 🔹 2. 透過 Spring Context 呼叫同類別內的 @Transactional 內層方法
+            // 面試必考：這樣才能確保事務完全在鎖的保護下運行，且在 unlock 回圈前先完成 DB Commit
+            RentalService self = applicationContext.getBean(RentalService.class);
+            return self.executeRentTransaction(batteryId, userId);
+        } finally {
+            // 🔴 3. 只有在事務完全提交 (或回滾) 後，才釋放鎖
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
+    }
+
+    @Transactional
+    public String executeRentTransaction(String batteryId, String userId) throws Exception {
+        Battery battery = batteryRepository.findById(batteryId).orElseThrow();
+        // 4. 狀態再次檢查 (此時在鎖的保護下，status 絕對不會發生幻讀)
+        if (!Battery.Status.AVAILABLE.name().equals(battery.getStatus())) {
+            throw new RuntimeException("❌ 搶租失敗：電池已被優先租走！");
+        }
+        
+        battery.setStatus(Battery.Status.RENTED.name());
+        batteryRepository.saveAndFlush(battery);
+        return "✅ 租借成功";
+    }
+    ```
+    這段看似基礎卻極易犯錯的 AOP (Aspect-Oriented Programming) 繞道設計 (`applicationContext.getBean()`)，正是我們防護 1000 顆電池在 K6 壓力測試中零超賣的終極武器。
 
 ### 2.4 非同步緩衝通道：RabbitMQ
 *   **應用場景**：負責接收所有「不需要立即給予回應」的物理數據（電量損耗百分比）。
