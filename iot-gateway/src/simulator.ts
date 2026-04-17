@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const GATEWAY_BASE = process.env.GATEWAY_URL || 'http://localhost:3001';
+const GATEWAY_BASE = process.env.GATEWAY_URL || 'https://battery-gateway-426680682460.asia-east1.run.app';
 const GATEWAY_URL = `${GATEWAY_BASE}/api/telemetry`;
 
 // -------------------------------------------------------

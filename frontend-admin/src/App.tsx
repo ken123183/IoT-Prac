@@ -2,7 +2,10 @@ import { useEffect, useState, useMemo } from 'react';
 import { io } from 'socket.io-client';
 import './App.css';
 
-const socket = io('http://localhost:3001');
+const socket = io('https://battery-gateway-426680682460.asia-east1.run.app', {
+  transports: ['websocket'],
+  upgrade: false
+});
 
 interface Battery {
   id: string;
@@ -19,7 +22,7 @@ function App() {
   useEffect(() => {
     const fetchInitialState = async () => {
       try {
-        const res = await fetch('http://localhost:3001/api/batteries');
+        const res = await fetch('https://battery-gateway-426680682460.asia-east1.run.app/api/batteries');
         const data = await res.json();
         const initialMap: Record<string, Battery> = {};
         data.forEach((b: Battery) => {
@@ -80,7 +83,7 @@ function App() {
   const handleRent = async (id: string) => {
     setLoading(true);
     try {
-      await fetch(`http://localhost:8080/api/rental/rent`, { 
+      await fetch(`https://battery-core-426680682460.asia-east1.run.app/api/rental/rent`, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ batteryId: id, userId: 'ADMIN_USER' })
@@ -95,7 +98,7 @@ function App() {
   const handleForceReturn = async (id: string) => {
     setLoading(true);
     try {
-      await fetch(`http://localhost:8080/api/rental/return/${id}`, { method: 'POST' });
+      await fetch(`https://battery-core-426680682460.asia-east1.run.app/api/rental/return/${id}`, { method: 'POST' });
     } catch (err) {
       console.error('Failed to return battery', err);
     } finally {
@@ -107,7 +110,7 @@ function App() {
     if (!window.confirm("確定要重置全系統嗎？")) return;
     setLoading(true);
     try {
-      await fetch('http://localhost:8080/api/admin/reset', { method: 'POST' });
+      await fetch('https://battery-core-426680682460.asia-east1.run.app/api/admin/reset', { method: 'POST' });
       setBatteries({}); 
     } catch (err) { console.error(err); } 
     finally { setLoading(false); }

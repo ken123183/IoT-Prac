@@ -37,6 +37,20 @@
 
 ---
 
+## ☁️ 雲端生產環境大遷徙與千人併發壓測 (GCP Serverless Production)
+
+除了在本地 Kubernetes (Kind) 完美運行外，本系統已成功無縫轉變至 **Google Cloud Platform (GCP)** 生產環境，採用了前沿的 **Serverless 架構** 與 **VPC 企業級隔離方案**：
+- **Managed Services**: Cloud SQL (PostgreSQL), Memorystore (Redis), Compute Engine (RabbitMQ)。
+- **Serverless**: 透過 Cloud Run 與 Serverless VPC Access 連接器實現按流量自動擴縮容。
+- **Load Testing**: 通過 `K6` 的嚴苛檢驗，在 1,000 顆物理感測器產生背景流量的同時，消化了數百筆併發的租借交易，達成 **100% 請求成功率零報錯** 的亮眼成績。
+
+> [!IMPORTANT]
+> **展示真實技術力與雲端排錯深度**：
+> 欲瞭解我如何解決 Cloud Run 面對資料庫的 VPC 隔離難題，以及我是如何從底層修復 Serverless Load Balancer 造成的 `Socket.io 400 Bad Request` 迷航問題，強烈建議您翻閱這份熱騰騰的戰紀！
+> 👉 [**🚀 從 Local K8s 到 GCP 生產環境：微服務雲端大遷徙與高併發壓測實戰報告**](./gcp_production_migration_report.md)
+
+---
+
 ## 🛠️ 技術棧 (Tech Stack)
 
 *   **後端核心**：Java 21, Spring Boot 3, Spring Data JPA

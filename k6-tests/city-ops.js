@@ -4,12 +4,12 @@ import { sleep, check } from 'k6';
 // 配置：20 個市民同時在線上活動
 export const options = {
     vus: 20,
-    duration: '20m', // 持續跑 20 分鐘
+    duration: '3m', // 短時間快速驗證雲端負載效能
 };
 
-const GATEWAY_URL = __ENV.GATEWAY_URL || 'http://localhost:3001/api/batteries';
-const RENT_URL = __ENV.RENT_URL || 'http://localhost:8080/api/rental/rent';
-const RETURN_URL_BASE = __ENV.RETURN_URL || 'http://localhost:8080/api/rental/return';
+const GATEWAY_URL = __ENV.GATEWAY_URL || 'https://battery-gateway-426680682460.asia-east1.run.app/api/batteries';
+const RENT_URL = __ENV.RENT_URL || 'https://battery-core-426680682460.asia-east1.run.app/api/rental/rent';
+const RETURN_URL_BASE = __ENV.RETURN_URL || 'https://battery-core-426680682460.asia-east1.run.app/api/rental/return';
 
 export default function () {
     // 1. 搜尋：尋找可用的電池
